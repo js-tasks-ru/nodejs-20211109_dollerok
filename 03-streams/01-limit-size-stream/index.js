@@ -6,6 +6,10 @@ const outStream = fs.createWriteStream('out.txt');
 
 limitedStream.pipe(outStream);
 
+limitedStream.on('error', (error) => {
+  throw error;
+});
+
 limitedStream.write('hello'); // 'hello' - это 5 байт, поэтому эта строчка целиком записана в файл
 
 setTimeout(() => {
