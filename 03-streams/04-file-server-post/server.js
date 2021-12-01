@@ -61,31 +61,6 @@ server.on('request', (req, res) => {
           ErrorHandler(readStream, null, null, res, 409, 'File exists.');
         })
 
-        // fs.exists(filepath, (exists) => {
-        //   if (!exists) {
-        //     var streamWrite = fs.createWriteStream(filepath);
-        //     var limitSize = new LimitSize({limit: 1024*1024});
-
-
-        //     req.on('error', async (err) => {
-        //       await ErrorHandler(streamWrite, filepath, res, 500, 'File read error.');
-        //     }).pipe(limitSize).on('error', async (err) => {
-        //       await ErrorHandler(streamWrite, filepath, res, 413, 'Limit size.');
-        //     }).pipe(streamWrite).on('error', async (err) => {
-        //       await ErrorHandler(streamWrite, filepath, res, 500, 'File write error.');
-        //     });
-
-        //     req.on('aborted', async () => {
-        //       await ErrorHandler(streamWrite, filepath, res, 500, 'Request aborted.');
-        //     });
-        //     streamWrite.on('finish', () => {
-        //       ErrorHandler(null, null, res, 201, 'Request aborted.');
-        //     })
-        //   } else {
-        //     ErrorHandler(null, null, res, 409, 'File exists.');
-        //   }
-        // })
-
       break;
 
     default:
