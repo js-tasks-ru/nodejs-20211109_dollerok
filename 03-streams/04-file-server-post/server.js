@@ -6,7 +6,8 @@ const LimitSize = require('./LimitSizeStream');
 
 const server = new http.Server();
 
-async function ErrorHandler(writeStream, filepath, res, statusCode, resMsg) {
+async function ErrorHandler(readStream, writeStream, filepath, res, statusCode, resMsg) {
+  readStream  ? await readStream.destroy() : null;
   writeStream ? await writeStream.destroy() : null;
   if (filepath) {
     await fs.unlink(filepath, (err) => {
@@ -26,39 +27,69 @@ server.on('request', (req, res) => {
   const filepath = path.join(__dirname, 'files', pathname);
 
   if (pathname.indexOf('/') > -1) {
-    ErrorHandler(null, null, res, 400, 'Do not support nesting.');
+    ErrorHandler(null, null, null, res, 400, 'Do not support nesting.');
   }
 
   switch (req.method) {
     case 'POST':
-        fs.exists(filepath, (exists) => {
-          if (!exists) {
+        let readStream = fs.createReadStream(filepath);
+        readStream.on('error', (err) => {
+          if (err.code == 'ENOENT') {
             var streamWrite = fs.createWriteStream(filepath);
             var limitSize = new LimitSize({limit: 1024*1024});
 
+
             req.on('error', async (err) => {
-              await ErrorHandler(streamWrite, filepath, res, 500, 'File read error.');
+              await ErrorHandler(readStream, streamWrite, filepath, res, 500, 'File read error.');
             }).pipe(limitSize).on('error', async (err) => {
-              await ErrorHandler(streamWrite, filepath, res, 413, 'Limit size.');
+              await ErrorHandler(readStream, streamWrite, filepath, res, 413, 'Limit size.');
             }).pipe(streamWrite).on('error', async (err) => {
-              await ErrorHandler(streamWrite, filepath, res, 500, 'File write error.');
+              await ErrorHandler(readStream, streamWrite, filepath, res, 500, 'File write error.');
             });
 
             req.on('aborted', async () => {
-              await ErrorHandler(streamWrite, filepath, res, 500, 'Request aborted.');
+              await ErrorHandler(readStream, streamWrite, filepath, res, 500, 'Request aborted.');
             });
             streamWrite.on('finish', () => {
-              ErrorHandler(null, null, res, 201, 'Request aborted.');
+              ErrorHandler(readStream, streamWrite, null, res, 201, 'Success.');
             })
           } else {
-            ErrorHandler(null, null, res, 409, 'File exists.');
+            ErrorHandler(readStream, null, null, res, 500, 'Request file error.');
           }
+        });
+        readStream.on('open', () => {
+          ErrorHandler(readStream, null, null, res, 409, 'File exists.');
         })
+
+        // fs.exists(filepath, (exists) => {
+        //   if (!exists) {
+        //     var streamWrite = fs.createWriteStream(filepath);
+        //     var limitSize = new LimitSize({limit: 1024*1024});
+
+
+        //     req.on('error', async (err) => {
+        //       await ErrorHandler(streamWrite, filepath, res, 500, 'File read error.');
+        //     }).pipe(limitSize).on('error', async (err) => {
+        //       await ErrorHandler(streamWrite, filepath, res, 413, 'Limit size.');
+        //     }).pipe(streamWrite).on('error', async (err) => {
+        //       await ErrorHandler(streamWrite, filepath, res, 500, 'File write error.');
+        //     });
+
+        //     req.on('aborted', async () => {
+        //       await ErrorHandler(streamWrite, filepath, res, 500, 'Request aborted.');
+        //     });
+        //     streamWrite.on('finish', () => {
+        //       ErrorHandler(null, null, res, 201, 'Request aborted.');
+        //     })
+        //   } else {
+        //     ErrorHandler(null, null, res, 409, 'File exists.');
+        //   }
+        // })
 
       break;
 
     default:
-      ErrorHandler(null, null, res, 501, 'Not implemented');
+      ErrorHandler(null, null, null, res, 501, 'Not implemented');
   }
 });
 
