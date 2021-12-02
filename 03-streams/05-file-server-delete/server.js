@@ -29,12 +29,12 @@ server.on('request', (req, res) => {
           res.end('Read file error.');
         }
       });
-      readStream.on('open', async () => {
-        await fs.unlink(filepath, (err) => {
+      readStream.on('open', () => {
+        fs.unlink(filepath, (err) => {
           res.statusCode = 500;
           res.end('Delete file error');
         });
-        await readStream.destroy();
+        readStream.destroy();
         res.statusCode = 200;
         res.end('Success');
       })
